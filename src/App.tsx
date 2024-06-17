@@ -8,6 +8,7 @@ import './App.css';
  */
 interface IState {
   data: ServerRespond[],
+  showGraph: boolean, //changing the static table into a live graph
 }
 
 /**
@@ -22,6 +23,7 @@ class App extends Component<{}, IState> {
       // data saves the server responds.
       // We use this state to parse data down to the child element (Graph) as element property
       data: [],
+      showGraph: false, //setting the initial state of graph as false (shows when user clicks 'start streaming data')
     };
   }
 
@@ -29,18 +31,30 @@ class App extends Component<{}, IState> {
    * Render Graph react component with state.data parse as property data
    */
   renderGraph() {
-    return (<Graph data={this.state.data}/>)
+    if (this.state.showGraph){ //ensures the graph doesn't render until a user clicks the 'start streaming' button
+          return (<Graph data={this.state.data}/>)
+    }
   }
 
   /**
    * Get new data from server and update the state with the new data
    */
-  getDataFromServer() {
-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
-      // Update the state by creating a new array of data that consists of
-      // Previous data in the state and the new data from server
-      this.setState({ data: [...this.state.data, ...serverResponds] });
-    });
+  getDataFromServer() { //gets data from the server continuously
+    let x = 0; //counter to limit the number of data fetches
+    const interval = setInterval(() => { //sets the number of time before fetching the data again
+      DataStreamer.getData((serverResponds: ServerRespond[]) => { //gets data from server
+        // Update the state by creating a new array of data that consists of
+        // Previous data in the state and the new data from server
+        this.setState({ //changes state so that the graph is shown
+          data: serverResponds,
+          showGraph: true,
+        });
+      });
+      x++; //increases the counter as data has been fetched
+      if (x > 1000) { //1000 fetches is the limit so checks if the limit has been reached
+        clearInterval(interval);
+      }
+    }, 100); //data fetched
   }
 
   /**
